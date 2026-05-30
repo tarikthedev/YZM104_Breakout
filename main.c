@@ -8,15 +8,16 @@ const int WINDOW_HEIGHT = 600;
 typedef struct {
     float x, y;
     float width, height;
+    float speed; 
 } Paddle;
 
 typedef struct {
     float x, y;
-    float size; 
+    float size;
+    float dx, dy; 
 } Ball;
 
 int main(int argc, char* argv[]) {
-
     (void)argc;
     (void)argv;
 
@@ -28,31 +29,21 @@ int main(int argc, char* argv[]) {
     SDL_Window* window = SDL_CreateWindow("Breakout - YZM104", 
                                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
                                           WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
-    if (!window) {
-        printf("Pencere olusturulamadi! SDL_Error: %s\n", SDL_GetError());
-        SDL_Quit();
-        return -1;
-    }
+    if (!window) return -1;
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer) {
-        printf("Renderer olusturulamadi! SDL_Error: %s\n", SDL_GetError());
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
+    if (!renderer) return -1;
 
     Paddle paddle = {
-        .width = 100, 
-        .height = 15,
-        .x = (WINDOW_WIDTH / 2.0f) - 50,
-        .y = WINDOW_HEIGHT - 40      
+        .width = 100, .height = 15,
+        .x = (WINDOW_WIDTH / 2.0f) - 50, .y = WINDOW_HEIGHT - 40,
+        .speed = 8.0f
     };
 
     Ball ball = {
         .size = 15,
-        .x = (WINDOW_WIDTH / 2.0f) - 7.5f,
-        .y = WINDOW_HEIGHT / 2.0f
+        .x = (WINDOW_WIDTH / 2.0f) - 7.5f, .y = WINDOW_HEIGHT / 2.0f,
+        .dx = 4.0f, .dy = -4.0f
     };
 
     bool isRunning = true;
@@ -64,6 +55,43 @@ int main(int argc, char* argv[]) {
                 isRunning = false;
             }
         }
+
+        const Uint8* state = SDL_GetKeyboardState(NULL);
+        if (state[SDL_SCANCODE_LEFT]) {
+            paddle.x -= paddle.speed;
+        }
+        if (state[SDL_SCANCODE_RIGHT]) {
+            paddle.x += paddle.speed;
+        }
+
+        if (paddle.x < 0) paddle.x = 0;
+        if (paddle.x + paddle.width > WINDOW_WIDTH) paddle.x = WINDOW_WIDTH - paddle.width;
+
+        ball.x += ball.dx;
+        ball.y += ball.dy;
+
+        if (ball.x <= 0 || ball.x + ball.size >= WINDOW_WIDTH) {
+            ball.dx = -ball.dx; 
+        }
+  
+        if (ball.y <= 0) {
+            ball.dy = -ball.dy; 
+        }
+
+        if (ball.y + ball.size >= WINDOW_HEIGHT) {
+            ball.dy = -ball.dy;
+        }
+
+
+        if (ball.x < paddle.x + paddle.width && 
+            ball.x + ball.size > paddle.x && 
+            ball.y < paddle.y + paddle.height && 
+            ball.y + ball.size > paddle.y) {
+            
+            ball.dy = -ball.dy; 
+            ball.y = paddle.y - ball.size; 
+        }
+
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
@@ -77,8 +105,7 @@ int main(int argc, char* argv[]) {
         SDL_RenderFillRect(renderer, &ballRect);
 
         SDL_RenderPresent(renderer);
-        
-        SDL_Delay(16); 
+        SDL_Delay(16);
     }
 
     SDL_DestroyRenderer(renderer);
